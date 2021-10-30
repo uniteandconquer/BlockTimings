@@ -100,6 +100,9 @@ public class BlockTimings extends javax.swing.JFrame
         int height = startHeight;
         finishHeight = startHeight + count - 1;
         
+        int minBlockTime= 0;
+        int maxBlockTime = 0;
+        
 //        System.out.println(String.format("Fetching blocks from height %s to %s\n\n", integerFormat(startHeight),integerFormat(finishHeight)));
         
         String jsonString;
@@ -129,6 +132,10 @@ public class BlockTimings extends javax.swing.JFrame
             timeOffset = calculateTimeOffset(keyDistanceRatio);
             blockTime = target - deviation + timeOffset;
             
+            minBlockTime = startHeight == height ? blockTime : minBlockTime;
+            minBlockTime = blockTime < minBlockTime ? blockTime : minBlockTime;
+            maxBlockTime = blockTime > maxBlockTime ? blockTime : maxBlockTime;
+            
             Database.insertIntoDB(new String[]{
                 tableName,
                 "block", String.valueOf(height),
@@ -137,7 +144,9 @@ public class BlockTimings extends javax.swing.JFrame
                 "key_distance_ratio", String.valueOf(keyDistanceRatio),
                 "time_offset", String.valueOf(timeOffset),
                 "block_time_real", String.valueOf(timeDelta),
-                "block_time_calc", String.valueOf(blockTime)
+                "block_time_calc", String.valueOf(blockTime),
+                "current_min",String.valueOf(minBlockTime),
+                "current_max",String.valueOf(maxBlockTime)
             }, connection);
             
             
@@ -160,6 +169,8 @@ public class BlockTimings extends javax.swing.JFrame
         meanTimeOffset = totalTimeOffset / count;
         timeOffsetDiff = meanTimeOffset - target;
         
+        int minMaxDelta = maxBlockTime - minBlockTime;
+        
         Database.insertIntoDB(new String[]{
                 summaryTableName,
                 "total_blocks_retrieved", String.valueOf(adjustedCount),
@@ -167,7 +178,8 @@ public class BlockTimings extends javax.swing.JFrame
                 "mean_time_offset", String.valueOf(meanTimeOffset),
                 "target_time_offset", String.valueOf(target),
                 "difference_from_target", String.valueOf(timeOffsetDiff),
-                "block_time_range",String.valueOf(blockTimeRange)
+                "block_time_range",String.valueOf(blockTimeRange),
+                "min_max_delta",String.valueOf(minMaxDelta)
             }, connection);
     }
     
@@ -212,7 +224,9 @@ public class BlockTimings extends javax.swing.JFrame
             "key_distance_ratio", "double",
             "time_offset", "int",
             "block_time_real", "int",
-            "block_time_calc", "int"
+            "block_time_calc", "int",
+            "current_min","int",
+            "current_max","int"
         }, connection);
         
         Database.createTable(new String[]{
@@ -222,7 +236,8 @@ public class BlockTimings extends javax.swing.JFrame
             "mean_time_offset", "int",
             "target_time_offset", "int",
             "difference_from_target", "int",
-            "block_time_range","int"
+            "block_time_range","int",
+            "min_max_delta","int"
         }, connection);
         
         Database.createTable(new String[]{
