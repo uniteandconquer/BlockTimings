@@ -103,6 +103,8 @@ public class BlockTimings extends javax.swing.JFrame
         int minBlockTime= 0;
         int maxBlockTime = 0;
         
+        int[] levels = new int[10];
+        
 //        System.out.println(String.format("Fetching blocks from height %s to %s\n\n", integerFormat(startHeight),integerFormat(finishHeight)));
         
         String jsonString;
@@ -132,6 +134,8 @@ public class BlockTimings extends javax.swing.JFrame
             timeOffset = calculateTimeOffset(keyDistanceRatio);
             blockTime = target - deviation + timeOffset;
             
+            levels[minterLevel - 1]++;
+            
             minBlockTime = startHeight == height ? blockTime : minBlockTime;
             minBlockTime = blockTime < minBlockTime ? blockTime : minBlockTime;
             maxBlockTime = blockTime > maxBlockTime ? blockTime : maxBlockTime;
@@ -160,7 +164,7 @@ public class BlockTimings extends javax.swing.JFrame
             height++;
         }
         
-        estimateBlockTimestamps(tableName,connection);
+        estimateBlockTimestamps(tableName,levels,connection);
         
         int adjustedCount = count - errors;
         if(adjustedCount == 0)
@@ -189,7 +193,7 @@ public class BlockTimings extends javax.swing.JFrame
         return exampleKeyDistance / level;
     }
     
-    private void estimateBlockTimestamps(String tableName, Connection connection)
+    private void estimateBlockTimestamps(String tableName,int [] levels, Connection connection)
     {
         int minBlockTime = 9999999;
         int maxBlockTime = 0;
@@ -205,12 +209,18 @@ public class BlockTimings extends javax.swing.JFrame
             if(blockTime < minBlockTime)
                 minBlockTime = blockTime;   
             
+            double signedPercentage = (double) ((double)levels[level - 1] / count) * 100;
+            
+            //round to 2 decimals
+            double scale = Math.pow(10, 2);
+            signedPercentage = Math.round(signedPercentage * scale) / scale;
+            
             Database.insertIntoDB(new String[]{tableName + "_LEVELS",
                 "level",String.valueOf(level),
                 "time_offset",String.valueOf(timeOffset),
-                "blocktime",String.valueOf(blockTime)}, connection);
+                "blocktime",String.valueOf(blockTime),
+                "signed_percentage",String.valueOf(signedPercentage)}, connection);
         }
-        
         blockTimeRange = maxBlockTime - minBlockTime;
     } 
 
@@ -244,7 +254,9 @@ public class BlockTimings extends javax.swing.JFrame
             tableName + "_levels",
             "level", "int",
             "time_offset", "int",
-            "blocktime", "int"
+            "blocktime", "int",
+            "signed_percentage","double"
+                
         }, connection);
     }
     
